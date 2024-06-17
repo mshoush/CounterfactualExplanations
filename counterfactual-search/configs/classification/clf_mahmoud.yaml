@@ -1,0 +1,65 @@
+task_name: classification
+
+seed: 777
+sample_interval: 30
+
+n_epochs: 40
+epoch_steps: 50
+
+logging_dir: ./training_logs/classification/covid_V2
+experiment_name: covid_effv2s_aug_tm-area-split_tm-thresh-1000_lr2_figaug_fgtumor
+checkpoint_freq: 10
+
+dataset:
+  kind: clf-explain-lungs # clf-train-lungs
+  batch_size: 256
+  img_size: [256, 256] # hxw
+  use_sampler: True
+  reset_sampler: True
+  num_workers: 28
+  imagenet_norm: False # mean=[0.5], std=[0.5]
+  root_dir: /gpfs/space/home/shoush/nn_project/project/datasets/COVID-19_Radiography_Dataset # Update this path if necessary# null
+  augs: [hflip, vflip, shift_scale_rotate] # only resize and norm
+
+  datasets:
+    - kind: clf-train-lungs
+      root_dir: /gpfs/space/home/shoush/nn_project/project/datasets/COVID-19_Radiography_Dataset # Update this path if necessary
+      split_dir: splits/limit_area_10/COVID
+
+      # TUH_LABEL_NAMES = {
+      #     1: "kidney",
+      #     2: "tumor",
+      #     3: "cyst"
+      # }
+      scan_params:
+        # load_masks: True
+        norm_scheme: &norm
+          kind: ct
+          rescale: True
+          #fingerprint_path: ./data/tuh_dataset_full/dataset_fingerprint_fg_tumor.json
+        slicing_direction: axial
+        classes: ['Lung_Opacity', 'Viral Pneumonia', 'Normal', 'COVID']
+        
+        sampling_class: ['COVID']
+        classify_labels: ['COVID']
+        classify_labels_thresh: 1000
+
+        # fetch only kidney slices in loaders that have masks with at least `filter_class_slices_thresh` non zero pixels
+        filter_class_slices: ['Normal']
+        filter_class_slices_thresh: 100
+
+model:
+  kind: resnet18
+  # kind: resnet18
+  n_classes: 1
+  pretrained: True
+  # restore_ckpt: training_logs/classification/resnet18-October-21-2023_02+35PM-af13228-tsm_synth_r18_kdn-only/checkpoints/checkpoint_50.pth
+  in_channels: 1
+
+  loss: bce
+
+  # optimizer's parameters
+  lr: 0.0003
+  b1: 0.9
+  b2: 0.999
+  weight_decay: 0.0001
